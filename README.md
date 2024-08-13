@@ -1,4 +1,7 @@
 # unraid-tailscale
+![License](https://img.shields.io/github/license/wjr1985/unraid-tailscale)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/y/wjr1985/unraid-tailscale)
+
 This is a fork of https://github.com/deasmi/unraid-tailscale. It's highly recommended to use the [Tailscale plugin for Unraid](https://forums.unraid.net/topic/136889-plugin-tailscale/), but I'm still going to try to keep this image updated for folks who still use it (like me).
 
 The Docker image can be found here https://hub.docker.com/repository/docker/wjr1985/unraid-tailscale/general - the tag for each image is the same as the version specified by Tailscale.
@@ -10,11 +13,6 @@ Original README below:
 ---------
 
 Docker build files for tailscale on unraid
-
-![License](https://img.shields.io/github/license/wjr1985/unraid-tailscale)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/y/wjr1985/unraid-tailscale)
-
-
 
 This is intentended to provide access to the unraid server itself over tailscale and does not act as a VPN gateway.
 It is possible to get this working using UP_FLAGS however as this was never the intention for this container I cannot provide
