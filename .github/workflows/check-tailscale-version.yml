@@ -1,0 +1,71 @@
+name: Check Tailscale Version
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # Run daily at 8 AM UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Get latest Tailscale release
+      id: latest_release
+      run: |
+        latest_release=$(curl -s https://api.github.com/repos/tailscale/tailscale/releases/latest | jq -r '.tag_name')
+        echo "version=$latest_release" >> $GITHUB_OUTPUT
+        echo "Latest Tailscale version: $latest_release"
+
+    - name: Check if version file exists
+      id: check_version_file
+      run: |
+        if [ -f .last_tailscale_version ]; then
+          last_version=$(cat .last_tailscale_version)
+          echo "last_version=$last_version" >> $GITHUB_OUTPUT
+          echo "Last processed version: $last_version"
+        else
+          echo "last_version=" >> $GITHUB_OUTPUT
+          echo "No previous version file found"
+        fi
+
+    - name: Check for amd64 package availability
+      id: check_amd64
+      if: steps.latest_release.outputs.version != steps.check_version_file.outputs.last_version
+      run: |
+        version="${{ steps.latest_release.outputs.version }}"
+        # Remove 'v' prefix if present
+        clean_version="${version#v}"
+        
+        # Check if amd64 package exists
+        package_url="https://pkgs.tailscale.com/stable/tailscale_${clean_version}_amd64.tgz"
+        
+        if curl --head --silent --fail "$package_url" > /dev/null; then
+          echo "amd64_available=true" >> $GITHUB_OUTPUT
+          echo "AMD64 package available for version $clean_version"
+        else
+          echo "amd64_available=false" >> $GITHUB_OUTPUT
+          echo "AMD64 package not available for version $clean_version, skipping build"
+        fi
+
+    - name: Run build script
+      if: steps.latest_release.outputs.version != steps.check_version_file.outputs.last_version && steps.check_amd64.outputs.amd64_available == 'true'
+      run: |
+        version="${{ steps.latest_release.outputs.version }}"
+        clean_version="${version#v}"
+        
+        echo "Building Tailscale version $clean_version"
+        chmod +x build.sh
+        ./build.sh "$clean_version"
+
+    - name: Update version file
+      if: steps.latest_release.outputs.version != steps.check_version_file.outputs.last_version && steps.check_amd64.outputs.amd64_available == 'true'
+      run: |
+        echo "${{ steps.latest_release.outputs.version }}" > .last_tailscale_version
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .last_tailscale_version
+        git commit -m "Update to Tailscale ${{ steps.latest_release.outputs.version }}" || exit 0
+        git push || exit 0
